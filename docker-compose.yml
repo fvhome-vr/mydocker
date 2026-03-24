@@ -1,0 +1,283 @@
+# version: "3"
+
+services:
+  tor:
+    image: peterdavehello/tor-socks-proxy:latest
+    container_name: tor
+    # Add bridges to torrc 
+    # https://bridges.torproject.org/options/
+    volumes:
+      - ${CONF_DIR}/tor:/etc/tor
+    ports:
+      - 9150:9150/tcp
+      - 8853:8853/udp
+    dns:
+      - "${DNS_IP}"
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+  transmission:
+    # https://hub.docker.com/r/linuxserver/transmission 
+    image: linuxserver/transmission:version-4.0.6-r4
+    container_name: transmission
+    environment:
+      - PUID=${WWW_USER_UID}
+      - PGID=${WWW_USER_GID}
+      - TZ=${TZ}
+      - USER=${TRANSMISSION_USER}
+      - PASS=${TRANSMISSION_USER_PASS}
+    volumes:
+      - ${CONF_DIR}/transmission/config:/config
+      - ${MEDIA_LIBARY}/transmission:/downloads
+      - ${CONF_DIR}/transmission/watch:/watch
+    ports:
+      - 9091:9091/tcp
+      - 51413:51413/tcp
+      - 51413:51413/udp
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+  plex:
+    # https://hub.docker.com/r/plexinc/pms-docker/tags 
+    image: plexinc/pms-docker:1.42.2.10156-f737b826c
+    container_name: plex
+    network_mode: host
+    environment:
+      - PLEX_UID=${WWW_USER_UID}
+      - PLEX_GID=${WWW_USER_GID}
+      - CHANGE_CONFIG_DIR_OWNERSHIP=false
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_CLAIM}
+      - ALLOWED_NETWORKS=${PLEX_ALLOWED_NETWORKS}
+    volumes:
+      - ${CONF_DIR}/plex/database:/config
+      - ${CONF_DIR}/plex/transcode:/transcode
+      - ${MEDIA_LIBARY}:/data
+    restart: unless-stopped
+    labels: 
+      - "location=${LOCATION}"
+    
+  nginx:
+    image: jwilder/nginx-proxy:1.7.1-alpine
+    container_name: nginx
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ${CONF_DIR}/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - ${CONF_DIR}/nginx/conf.d:/etc/nginx/conf.d:rw
+      - ${CONF_DIR}/nginx/html:/usr/share/nginx/html:rw
+      - ${CONF_DIR}/nginx/certs:/etc/nginx/certs:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+  
+  mysql:
+    image: mariadb:10.6.24
+    container_name: mysql
+    volumes:
+      - ${CONF_DIR}/mysql:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_USER_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+  redis:
+    image: redis:8.2.3
+    container_name: redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_HOST_PASSWORD}
+    volumes:
+      - ${CONF_DIR}/redis:/data
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion:2.0
+    container_name: letsencrypt
+    depends_on:
+      - nginx
+    volumes:
+      - ${CONF_DIR}/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - ${CONF_DIR}/nginx/conf.d:/etc/nginx/conf.d:rw
+      - ${CONF_DIR}/nginx/html:/usr/share/nginx/html:rw
+      - ${CONF_DIR}/nginx/certs:/etc/nginx/certs:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - NGINX_PROXY_CONTAINER=nginx
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+  nextcloud:
+    # https://hub.docker.com/_/nextcloud/tags  
+    image: nextcloud:32.0.3-apache
+    container_name: nextcloud
+    depends_on:
+      - letsencrypt
+      - nginx
+      - mysql
+      - redis
+    volumes:
+      - ${CONF_DIR}/nextcloud/html:/var/www/html
+      - ${CONF_DIR}/nextcloud/config:/var/www/html/config
+      - ${CONF_DIR}/nextcloud/custom_apps:/var/www/html/custom_apps
+      - ${DATA_DIR}/nextcloud:/var/www/html/data
+      - ${MEDIA_LIBARY}:/var/www/html${MEDIA_LIBARY}
+      - ${CONF_DIR}/nextcloud/themes:/var/www/html/themes
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - LETSENCRYPT_HOST=${LETSENCRYPT_HOST}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - REDIS_HOST=redis
+      - REDIS_HOST_PORT=6379
+      - REDIS_HOST_PASSWORD=${REDIS_HOST_PASSWORD}
+      - "NEXTCLOUD_DATA_DIR=/var/www/html${MEDIA_LIBARY}"
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+# ON HOST ADD to cron
+# Nextcloud cron.php job
+# */5  *  *  *  * docker exec -t -u www-data nextcloud php -f cron.php
+
+  prometheus:
+    # https://hub.docker.com/r/prom/prometheus/tags
+    image: prom/prometheus:v3.7.3
+    container_name: prometheus
+    user: ${WWW_USER}
+    volumes:
+      - ${CONF_DIR}/prometheus:/etc/prometheus
+      - ${DATA_DIR}/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - "--web.external-url=http://${IP}:9090"
+      - '--web.enable-admin-api'
+    ports:
+      - 9090:9090
+    links:
+      - cadvisor:cadvisor
+      - alertmanager:alertmanager
+      - node-exporter:node-exporter
+      - pushgateway:pushgateway
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+  pushgateway:
+    # https://hub.docker.com/r/prom/pushgateway/tags
+    image: prom/pushgateway:v1.11.2
+    container_name: pushgateway
+    restart: unless-stopped
+    ports:
+      - 9101:9091
+    labels:
+      - "location=${LOCATION}"
+
+  node-cert-exporter:
+    image: amimof/node-cert-exporter:v1.1.1 
+    container_name: node-cert-exporter
+    volumes:
+      - ${CONF_DIR}/nginx/certs:/etc/ssl:ro
+    command:
+      - "--path=/etc/ssl/${DOMAIN}/"
+      - '--logtostderr=true' 
+    ports:
+      - 9117:9117
+    restart: unless-stopped 
+    labels:
+      - "location=${LOCATION}"
+ 
+  node-exporter:
+    # https://hub.docker.com/r/prom/node-exporter/tags
+    image: prom/node-exporter:v1.10.2
+    container_name: node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      # - /:/rootfs:ro
+      - /:/host:ro,rslave
+    command: 
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|run/udev/data)($$|/)'
+      # - '--collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$'
+    ports:
+      - 9100:9100
+    restart: unless-stopped 
+    labels:
+      - "location=${LOCATION}"
+
+  cadvisor:
+    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:v0.46.0
+    privileged: true
+    volumes:
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /sys:/sys:ro
+      - /var/run:/var/run:rw
+      - /:/rootfs:ro
+      - /sys/fs/cgroup:/cgroup:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /etc/localtime:/etc/localtime:ro
+    command:
+      - "-docker_only=true"
+      - "-disable_metrics=percpu,sched,tcp,udp,disk,diskIO,accelerator,hugetlb,referenced_memory,cpu_topology,resctrl"
+      - "-housekeeping_interval=30s"
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+  alertmanager:
+    image: prom/alertmanager:v0.29.0
+    container_name: alertmanager
+    ports:
+      - 9093:9093
+    volumes:
+      - ${CONF_DIR}/alertmanager/:/etc/alertmanager/
+    restart: unless-stopped 
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - "--web.external-url=http://${IP}:9093"
+      # - '--log.level=debug'
+    labels:
+      - "location=${LOCATION}"
+
+#  byedpi:
+#    image: tazihad/byedpi:latest
+#    container_name: byedpi
+#    volumes:
+#      - ${CONF_DIR}/byedpi/host.crack:/host.crack
+#    # command: --hosts /host.crack -s1 -q1 -Y -Ar -s5 -o1+s -At -f-1 -r1+s -As -s1 -o1 +s -s-1 -An -b+500 --debug 1 
+#    command: --hosts /host.crack -s1 -q1 -Y -Ar -s5 -o25000+s -At -f-1 -r1+s -As -s1 -o1+s -s-1 -An -b+500 --debug 1 
+#    ports:
+#      -  1080:1080
+#        #    dns:
+#        #      - "8.8.8.8"
+#    restart: unless-stopped
+#    labels:
+#      - "location=${LOCATION}"
+
+networks:                                
+  default:                               
+    driver: bridge                       
+    driver_opts:                         
+      com.docker.network.driver.mtu: 1400
