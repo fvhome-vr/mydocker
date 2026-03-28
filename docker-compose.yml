@@ -9,9 +9,7 @@ services:
     configs:
       - source: tor_config
         target: /etc/tor/torrc
-        mode: "0600"
-    volumes:
-      - ${CONF_DIR}/tor:/etc/tor
+        mode: "0444"
     ports:
       - 9150:9150/tcp
       - 8853:8853/udp
