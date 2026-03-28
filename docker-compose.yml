@@ -2,10 +2,14 @@
 
 services:
   tor:
-    image: peterdavehello/tor-socks-proxy:latest
+    image: ${TOR_TAG}
     container_name: tor
-    # Add bridges to torrc 
+    # Add bridges to torrc
     # https://bridges.torproject.org/options/
+    configs:
+      - source: tor_config
+        target: /etc/tor/torrc
+        mode: "0600"
     volumes:
       - ${CONF_DIR}/tor:/etc/tor
     ports:
@@ -18,8 +22,7 @@ services:
       - "location=${LOCATION}"
 
   transmission:
-    # https://hub.docker.com/r/linuxserver/transmission 
-    image: linuxserver/transmission:version-4.0.6-r4
+    image: ${TRANSMISSION_TAG}
     container_name: transmission
     environment:
       - PUID=${WWW_USER_UID}
@@ -40,8 +43,7 @@ services:
       - "location=${LOCATION}"
 
   plex:
-    # https://hub.docker.com/r/plexinc/pms-docker/tags 
-    image: plexinc/pms-docker:1.42.2.10156-f737b826c
+    image: ${PLEX_TAG}
     container_name: plex
     network_mode: host
     environment:
@@ -56,11 +58,11 @@ services:
       - ${CONF_DIR}/plex/transcode:/transcode
       - ${MEDIA_LIBARY}:/data
     restart: unless-stopped
-    labels: 
+    labels:
       - "location=${LOCATION}"
-    
+
   nginx:
-    image: jwilder/nginx-proxy:1.7.1-alpine
+    image: ${NGINX_TAG}
     container_name: nginx
     ports:
       - 80:80
@@ -75,9 +77,9 @@ services:
     restart: unless-stopped
     labels:
       - "location=${LOCATION}"
-  
+
   mysql:
-    image: mariadb:10.6.24
+    image: ${MYSQL_TAG}
     container_name: mysql
     volumes:
       - ${CONF_DIR}/mysql:/var/lib/mysql
@@ -92,7 +94,7 @@ services:
       - "location=${LOCATION}"
 
   redis:
-    image: redis:8.2.3
+    image: ${REDIS_TAG}
     container_name: redis
     command: redis-server --appendonly yes --requirepass ${REDIS_HOST_PASSWORD}
     volumes:
@@ -102,7 +104,7 @@ services:
       - "location=${LOCATION}"
 
   letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion:2.0
+    image: ${LETSENCRYPT_TAG}
     container_name: letsencrypt
     depends_on:
       - nginx
@@ -120,8 +122,7 @@ services:
       - "location=${LOCATION}"
 
   nextcloud:
-    # https://hub.docker.com/_/nextcloud/tags  
-    image: nextcloud:32.0.3-apache
+    image: ${NEXTCLOUD_TAG}
     container_name: nextcloud
     depends_on:
       - letsencrypt
@@ -148,26 +149,25 @@ services:
     labels:
       - "location=${LOCATION}"
 
-# ON HOST ADD to cron
-# Nextcloud cron.php job
-# */5  *  *  *  * docker exec -t -u www-data nextcloud php -f cron.php
+  # ON HOST ADD to cron
+  # Nextcloud cron.php job
+  # */5  *  *  *  * docker exec -t -u www-data nextcloud php -f cron.php
 
   prometheus:
-    # https://hub.docker.com/r/prom/prometheus/tags
-    image: prom/prometheus:v3.7.3
+    image: ${PROMETHEUS_TAG}
     container_name: prometheus
     user: ${WWW_USER}
     volumes:
       - ${CONF_DIR}/prometheus:/etc/prometheus
       - ${DATA_DIR}/prometheus:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=15d'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
       - "--web.external-url=http://${IP}:9090"
-      - '--web.enable-admin-api'
+      - "--web.enable-admin-api"
     ports:
       - 9090:9090
     links:
@@ -179,8 +179,7 @@ services:
     labels:
       - "location=${LOCATION}"
   pushgateway:
-    # https://hub.docker.com/r/prom/pushgateway/tags
-    image: prom/pushgateway:v1.11.2
+    image: ${PUSHGATEWAY_TAG}
     container_name: pushgateway
     restart: unless-stopped
     ports:
@@ -189,43 +188,42 @@ services:
       - "location=${LOCATION}"
 
   node-cert-exporter:
-    image: amimof/node-cert-exporter:v1.1.1 
+    image: ${NODE_CERT_EXPORTER_TAG}
     container_name: node-cert-exporter
     volumes:
       - ${CONF_DIR}/nginx/certs:/etc/ssl:ro
     command:
       - "--path=/etc/ssl/${DOMAIN}/"
-      - '--logtostderr=true' 
+      - "--logtostderr=true"
     ports:
       - 9117:9117
-    restart: unless-stopped 
+    restart: unless-stopped
     labels:
       - "location=${LOCATION}"
- 
+
   node-exporter:
-    # https://hub.docker.com/r/prom/node-exporter/tags
-    image: prom/node-exporter:v1.10.2
+    image: ${NODE_EXPORTER_TAG}
     container_name: node-exporter
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       # - /:/rootfs:ro
       - /:/host:ro,rslave
-    command: 
-      - '--path.rootfs=/host'
-      - '--path.procfs=/host/proc' 
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|run/udev/data)($$|/)'
+    command:
+      - "--path.rootfs=/host"
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|run/udev/data)($$|/)"
       # - '--collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$'
     ports:
       - 9100:9100
-    restart: unless-stopped 
+    restart: unless-stopped
     labels:
       - "location=${LOCATION}"
 
   cadvisor:
+    image: ${CADVISOR_TAG}
     container_name: cadvisor
-    image: gcr.io/cadvisor/cadvisor:v0.46.0
     privileged: true
     volumes:
       - /var/lib/docker/:/var/lib/docker:ro
@@ -247,28 +245,28 @@ services:
       - "location=${LOCATION}"
 
   alertmanager:
-    image: prom/alertmanager:v0.29.0
+    image: ${ALERTMANAGER_TAG}
     container_name: alertmanager
     ports:
       - 9093:9093
     volumes:
       - ${CONF_DIR}/alertmanager/:/etc/alertmanager/
-    restart: unless-stopped 
+    restart: unless-stopped
     command:
-      - '--config.file=/etc/alertmanager/config.yml'
-      - '--storage.path=/alertmanager'
+      - "--config.file=/etc/alertmanager/config.yml"
+      - "--storage.path=/alertmanager"
       - "--web.external-url=http://${IP}:9093"
       # - '--log.level=debug'
     labels:
       - "location=${LOCATION}"
 
 #  byedpi:
-#    image: tazihad/byedpi:latest
+#    image: ${BYDPI_TAG}
 #    container_name: byedpi
 #    volumes:
 #      - ${CONF_DIR}/byedpi/host.crack:/host.crack
-#    # command: --hosts /host.crack -s1 -q1 -Y -Ar -s5 -o1+s -At -f-1 -r1+s -As -s1 -o1 +s -s-1 -An -b+500 --debug 1 
-#    command: --hosts /host.crack -s1 -q1 -Y -Ar -s5 -o25000+s -At -f-1 -r1+s -As -s1 -o1+s -s-1 -An -b+500 --debug 1 
+#    # command: --hosts /host.crack -s1 -q1 -Y -Ar -s5 -o1+s -At -f-1 -r1+s -As -s1 -o1 +s -s-1 -An -b+500 --debug 1
+#    command: --hosts /host.crack -s1 -q1 -Y -Ar -s5 -o25000+s -At -f-1 -r1+s -As -s1 -o1+s -s-1 -An -b+500 --debug 1
 #    ports:
 #      -  1080:1080
 #        #    dns:
@@ -277,8 +275,25 @@ services:
 #    labels:
 #      - "location=${LOCATION}"
 
-networks:                                
-  default:                               
-    driver: bridge                       
-    driver_opts:                         
+networks:
+  default:
+    driver: bridge
+    driver_opts:
       com.docker.network.driver.mtu: 1400
+
+configs:
+  tor_config:
+    content: |
+      HardwareAccel 1
+      Log notice stdout
+      DNSPort 0.0.0.0:8853
+      SocksPort 0.0.0.0:9150
+      DataDirectory /var/lib/tor
+      UseBridges 1
+      # UpdateBridgesFromAuthority 1
+      # Install obfs4proxy (lyrebird) to container
+      # apk update & apk add obfs4proxy
+      ClientTransportPlugin obfs4 exec /usr/bin/lyrebird
+      # https://torscan-ru.ntc.party/
+      # sed 's/^obfs5 /Bridge obfs4 /g' -i /opt/tor/torrc
+      ${TOR_BRIDGES}
