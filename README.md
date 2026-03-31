@@ -14,15 +14,25 @@ It's compose file for deploy to standalone home server:
   - cAdvisor
   - cert-exporter
 
-### recomendations
+### recomendations before deploy
 
-to do
+1. Add to /etc/docker/daemon.json for metrics 
 
-## configuration files
+```
+{  
+ "metrics-addr": "172.17.0.1:9323",  
+}
+```
 
-to do:
-- add templates for $CONF_DIR
-- instructions
+2. Create directory ${DATA_DIR} and ${MEDIA_LIBARY} and set ${WWW_USER} owner permissions
+
+```
+mkdir -p ${DATA_DIR}
+mkdir -p ${MEDIA_LIBARY}/{music,photo,video}
+mkdir -p ${MEDIA_LIBARY}/transmission/{complete,incomplete}
+chown ${WWW_USER_UID}:${WWW_USER_GID} -R ${DATA_DIR} ${MEDIA_LIBARY}
+chmod g+s -R ${DATA_DIR}
+```
 
 ## install
 
@@ -35,3 +45,14 @@ vim .env
 docker compose up -d
 ```
 
+## after installation
+
+link: https://${DOMAIN}
+
+External storage
+
+Go to Administration -> External storage 
+Add storage
+Photo - Local - None - /var/www/html/data/media_libary/photo
+Music - Local - None - /var/www/html/data/media_libary/music
+Torrents - Local - None - /var/www/html/data/media_libary/transmission/complete
