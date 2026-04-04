@@ -27,11 +27,11 @@ It's compose file for deploy to standalone home server:
 2. Create directory ${DATA_DIR} and ${MEDIA_LIBARY} and set ${WWW_USER} owner permissions
 
 ```
-mkdir -p ${DATA_DIR}
+mkdir -p ${DATA_DIR}/prometheus
 mkdir -p ${MEDIA_LIBARY}/{music,photo,video}
 mkdir -p ${MEDIA_LIBARY}/transmission/{complete,incomplete}
 chown ${WWW_USER_UID}:${WWW_USER_GID} -R ${DATA_DIR} ${MEDIA_LIBARY}
-chmod g+s -R ${DATA_DIR}
+chmod g+s -R ${DATA_DIR} ${MEDIA_LIBARY}
 ```
 
 ## install
@@ -47,7 +47,14 @@ docker compose up -d
 
 ## after installation
 
-link: https://${DOMAIN}
+1. uncomment ssl section in nginx_config docker-compose-config.yml and redeploy nginx
+
+`docker compose up nginx -d --force-recreate`
+
+TODO: bootstrap nginx for first time deploy, 
+      if ssl section present - nginx not started cause no cert files
+
+2. link: https://${DOMAIN}
 
 External storage
 
