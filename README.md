@@ -1,6 +1,7 @@
 # mydocker
 
 It's compose file for deploy to standalone home server:
+
 - plex
 - nextcloud
 - nginx and letsencrypt
@@ -16,7 +17,7 @@ It's compose file for deploy to standalone home server:
 
 ### recomendations before deploy
 
-1. Add to /etc/docker/daemon.json for metrics 
+1. Add to /etc/docker/daemon.json for metrics
 
 ```
 {  
@@ -24,7 +25,7 @@ It's compose file for deploy to standalone home server:
 }
 ```
 
-2. Create directory ${DATA_DIR} and ${MEDIA_LIBARY} and set ${WWW_USER} owner permissions
+1. Create directory ${DATA_DIR} and ${MEDIA_LIBARY} and set ${WWW_USER} owner permissions
 
 ```
 mkdir -p ${DATA_DIR}/prometheus
@@ -36,30 +37,36 @@ chmod g+s -R ${DATA_DIR} ${MEDIA_LIBARY}
 
 ## install
 
-```
+```sh
 git clone https://github.com/fvhome-vr/mydocker.git
 cd mydocker
 mv env.default .env
-# set your envirement
+```
+
+set your envirement.
+if monitoring need, set DEPLOY_MONITORING=true
+
+```sh
 vim .env
-docker compose up -d
+```
+
+Make deploy
+
+```sh
+chmod +x deply.sh
+bash ./deploy.sh
 ```
 
 ## after installation
 
-1. uncomment ssl section in nginx_config docker-compose-config.yml and redeploy nginx
-
-`docker compose up nginx -d --force-recreate`
-
-TODO: bootstrap nginx for first time deploy, 
-      if ssl section present - nginx not started cause no cert files
-
-2. link: https://${DOMAIN}
+1. link: https://${DOMAIN}
 
 External storage
 
-Go to Administration -> External storage 
-Add storage
-Photo - Local - None - /var/www/html/data/media_libary/photo
-Music - Local - None - /var/www/html/data/media_libary/music
-Torrents - Local - None - /var/www/html/data/media_libary/transmission/complete
+Go to `Administration -> External storage`
+
+Add storage:
+
+- Photo - Local - None - /var/www/html/data/media_libary/photo
+- Music - Local - None - /var/www/html/data/media_libary/music
+- Torrents - Local - None - /var/www/html/data/media_libary/transmission/complete
