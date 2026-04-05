@@ -7,7 +7,7 @@ services:
     profiles:
       - setup
     image: ${LETSENCRYPT_TAG}
-    container_name: letsencrypt
+    container_name: letsencrypt_setup
     depends_on:
       - nginx_setup
     volumes:
@@ -30,17 +30,24 @@ services:
     container_name: nginx_setup
     ports:
       - 80:80
+      # - 443:443
     configs:
-      - source: nginx_config_setup
+      - source: nginx_setup_config
         target: /etc/nginx/conf.d/${DOMAIN}.conf
-        mode: "0644"
+        # mode: "0644"
+      # - source: nginx_setup_vhost 
+      #   target: /etc/nginx/vhost.d/default
+      #   mode: "0644"
     volumes:
       - ${CONF_DIR}/nginx/vhost.d:/etc/nginx/vhost.d:rw
       - ${CONF_DIR}/nginx/conf.d:/etc/nginx/conf.d:rw
       - ${CONF_DIR}/nginx/html:/usr/share/nginx/html:rw
-      - ${CONF_DIR}/nginx/certs:/etc/nginx/certs:ro
+      - ${CONF_DIR}/nginx/certs:/etc/nginx/certs:rw
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/tmp/docker.sock:ro
+    environment:
+      - LETSENCRYPT_HOST=${LETSENCRYPT_HOST}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
     restart: unless-stopped
     labels:
       - "location=${LOCATION}"
@@ -56,7 +63,7 @@ services:
     configs:
       - source: tor_config
         target: /etc/tor/torrc
-        mode: "0444"
+        # mode: "0444"
     ports:
       - 9150:9150/tcp
       - 8853:8853/udp
@@ -143,7 +150,7 @@ services:
     configs:
       - source: nginx_config
         target: /etc/nginx/conf.d/${DOMAIN}.conf
-        mode: "0644"
+        # mode: "0644"
     volumes:
       - ${CONF_DIR}/nginx/vhost.d:/etc/nginx/vhost.d:rw
       - ${CONF_DIR}/nginx/conf.d:/etc/nginx/conf.d:rw
@@ -205,9 +212,9 @@ services:
     configs:
       - source: nexcloud_init
         target: /docker-entrypoint-hooks.d/pre-installation/init.sh
-        uid: ${WWW_USER_UID}
-        gid: ${WWW_USER_GID}
-        mode: "0740"
+        # uid: ${WWW_USER_UID}
+        # gid: ${WWW_USER_GID}
+        # mode: "0700"
 
     environment:
       - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
@@ -236,7 +243,7 @@ services:
 
   prometheus:
     profiles:
-      - monitoring
+      - main
     image: ${PROMETHEUS_TAG}
     container_name: prometheus
     user: ${WWW_USER}
@@ -270,7 +277,7 @@ services:
 
   pushgateway:
     profiles:
-      - monitoring
+      - main
     image: ${PUSHGATEWAY_TAG}
     container_name: pushgateway
     restart: unless-stopped
@@ -281,7 +288,7 @@ services:
 
   node-cert-exporter:
     profiles:
-      - monitoring
+      - main
     image: ${NODE_CERT_EXPORTER_TAG}
     container_name: node-cert-exporter
     volumes:
@@ -297,7 +304,7 @@ services:
 
   node-exporter:
     profiles:
-      - monitoring
+      - main
     image: ${NODE_EXPORTER_TAG}
     container_name: node-exporter
     volumes:
@@ -319,7 +326,7 @@ services:
 
   cadvisor:
     profiles:
-      - monitoring
+      - main
     image: ${CADVISOR_TAG}
     container_name: cadvisor
     privileged: true
@@ -344,7 +351,7 @@ services:
 
   alertmanager:
     profiles:
-      - monitoring
+      - main
     image: ${ALERTMANAGER_TAG}
     container_name: alertmanager
     ports:
