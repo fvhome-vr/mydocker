@@ -17,7 +17,7 @@ It's compose file for deploy to standalone home server:
 
 ### recomendations before deploy
 
-1. Add to /etc/docker/daemon.json for metrics
+Add to /etc/docker/daemon.json for metrics
 
 ```
 {  
@@ -25,32 +25,25 @@ It's compose file for deploy to standalone home server:
 }
 ```
 
-1. Create directory ${DATA_DIR} and ${MEDIA_LIBARY} and set ${WWW_USER} owner permissions
-
-```
-mkdir -p ${DATA_DIR}/prometheus
-mkdir -p ${MEDIA_LIBARY}/{music,photo,video}
-mkdir -p ${MEDIA_LIBARY}/transmission/{complete,incomplete}
-chown ${WWW_USER_UID}:${WWW_USER_GID} -R ${DATA_DIR} ${MEDIA_LIBARY}
-chmod g+s -R ${DATA_DIR} ${MEDIA_LIBARY}
-```
-
 ## install
+
+### clone repo
 
 ```sh
 git clone https://github.com/fvhome-vr/mydocker.git
 cd mydocker
-mv env.default .env
 ```
 
-set your envirement.
-if monitoring need, set DEPLOY_MONITORING=true
+### set your envirement.
 
 ```sh
+mv env.default .env
 vim .env
 ```
 
-Make deploy
+### make deploy
+First, create the directories and set permissions. Then, run the temporary letsencrypt_setup and nginx_setup on port 80/tcp to get the first SSL certificate.
+When the symbolic link is created, use CTRL+C to terminate the first process and initiate the deployment of main services.
 
 ```sh
 chmod +x deply.sh
@@ -59,9 +52,9 @@ bash ./deploy.sh
 
 ## after installation
 
-1. link: https://${DOMAIN}
+link: https://${DOMAIN}
 
-External storage
+1. Setting external storage
 
 Go to `Administration -> External storage`
 
