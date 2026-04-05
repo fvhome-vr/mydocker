@@ -1,7 +1,61 @@
 # version: "3"
+include:
+  - ./docker-compose-configs.yml
 
 services:
+  letsencrypt_setup:
+    profiles:
+      - setup
+    image: ${LETSENCRYPT_TAG}
+    container_name: letsencrypt_setup
+    depends_on:
+      - nginx_setup
+    volumes:
+      - ${CONF_DIR}/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - ${CONF_DIR}/nginx/conf.d:/etc/nginx/conf.d:rw
+      - ${CONF_DIR}/nginx/html:/usr/share/nginx/html:rw
+      - ${CONF_DIR}/nginx/certs:/etc/nginx/certs:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - NGINX_PROXY_CONTAINER=nginx_setup
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+  nginx_setup:
+    profiles:
+      - setup
+    image: ${NGINX_TAG}
+    container_name: nginx_setup
+    ports:
+      - 80:80
+      # - 443:443
+    configs:
+      - source: nginx_setup_config
+        target: /etc/nginx/conf.d/${DOMAIN}.conf
+        # mode: "0644"
+      # - source: nginx_setup_vhost 
+      #   target: /etc/nginx/vhost.d/default
+      #   mode: "0644"
+    volumes:
+      - ${CONF_DIR}/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - ${CONF_DIR}/nginx/conf.d:/etc/nginx/conf.d:rw
+      - ${CONF_DIR}/nginx/html:/usr/share/nginx/html:rw
+      - ${CONF_DIR}/nginx/certs:/etc/nginx/certs:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    environment:
+      - LETSENCRYPT_HOST=${LETSENCRYPT_HOST}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
   tor:
+    profiles:
+      - main
+      - socks
     image: ${TOR_TAG}
     container_name: tor
     # Add bridges to torrc
@@ -9,7 +63,7 @@ services:
     configs:
       - source: tor_config
         target: /etc/tor/torrc
-        mode: "0444"
+        # mode: "0444"
     ports:
       - 9150:9150/tcp
       - 8853:8853/udp
@@ -20,6 +74,8 @@ services:
       - "location=${LOCATION}"
 
   transmission:
+    profiles:
+      - main
     image: ${TRANSMISSION_TAG}
     container_name: transmission
     environment:
@@ -41,6 +97,8 @@ services:
       - "location=${LOCATION}"
 
   plex:
+    profiles:
+      - main
     image: ${PLEX_TAG}
     container_name: plex
     network_mode: host
@@ -59,49 +117,10 @@ services:
     labels:
       - "location=${LOCATION}"
 
-  nginx:
-    image: ${NGINX_TAG}
-    container_name: nginx
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - ${CONF_DIR}/nginx/vhost.d:/etc/nginx/vhost.d:rw
-      - ${CONF_DIR}/nginx/conf.d:/etc/nginx/conf.d:rw
-      - ${CONF_DIR}/nginx/html:/usr/share/nginx/html:rw
-      - ${CONF_DIR}/nginx/certs:/etc/nginx/certs:ro
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-    restart: unless-stopped
-    labels:
-      - "location=${LOCATION}"
-
-  mysql:
-    image: ${MYSQL_TAG}
-    container_name: mysql
-    volumes:
-      - ${CONF_DIR}/mysql:/var/lib/mysql
-      - /etc/localtime:/etc/localtime:ro
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_PASSWORD=${MYSQL_USER_PASSWORD}
-      - MYSQL_DATABASE=nextcloud
-      - MYSQL_USER=nextcloud
-    restart: unless-stopped
-    labels:
-      - "location=${LOCATION}"
-
-  redis:
-    image: ${REDIS_TAG}
-    container_name: redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_HOST_PASSWORD}
-    volumes:
-      - ${CONF_DIR}/redis:/data
-    restart: unless-stopped
-    labels:
-      - "location=${LOCATION}"
-
   letsencrypt:
+    profiles:
+      - main
+      - proxy
     image: ${LETSENCRYPT_TAG}
     container_name: letsencrypt
     depends_on:
@@ -119,7 +138,62 @@ services:
     labels:
       - "location=${LOCATION}"
 
+  nginx:
+    profiles:
+      - main
+      - proxy
+    image: ${NGINX_TAG}
+    container_name: nginx
+    ports:
+      - 80:80
+      - 443:443
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/conf.d/${DOMAIN}.conf
+        # mode: "0644"
+    volumes:
+      - ${CONF_DIR}/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - ${CONF_DIR}/nginx/conf.d:/etc/nginx/conf.d:rw
+      - ${CONF_DIR}/nginx/html:/usr/share/nginx/html:rw
+      - ${CONF_DIR}/nginx/certs:/etc/nginx/certs:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+  mysql:
+    profiles:
+      - main
+    image: ${MYSQL_TAG}
+    container_name: mysql
+    volumes:
+      - ${CONF_DIR}/mysql:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_USER_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
+  redis:
+    profiles:
+      - main
+    image: ${REDIS_TAG}
+    container_name: redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_HOST_PASSWORD}
+    volumes:
+      - ${CONF_DIR}/redis:/data
+    restart: unless-stopped
+    labels:
+      - "location=${LOCATION}"
+
   nextcloud:
+    profiles:
+      - main
     image: ${NEXTCLOUD_TAG}
     container_name: nextcloud
     depends_on:
@@ -132,17 +206,33 @@ services:
       - ${CONF_DIR}/nextcloud/config:/var/www/html/config
       - ${CONF_DIR}/nextcloud/custom_apps:/var/www/html/custom_apps
       - ${DATA_DIR}/nextcloud:/var/www/html/data
-      - ${MEDIA_LIBARY}:/var/www/html${MEDIA_LIBARY}
+      - ${MEDIA_LIBARY}:/var/www/html/data/media_libary
       - ${CONF_DIR}/nextcloud/themes:/var/www/html/themes
       - /etc/localtime:/etc/localtime:ro
+    configs:
+      - source: nexcloud_init
+        target: /docker-entrypoint-hooks.d/pre-installation/init.sh
+        # uid: ${WWW_USER_UID}
+        # gid: ${WWW_USER_GID}
+        # mode: "0700"
+
     environment:
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - NEXTCLOUD_DATA_DIR=/var/www/html/data
+      - NEXTCLOUD_TRUSTED_DOMAINS="${DOMAIN}"
+      # - OVERWRITEHOST="${DOMAIN}"
+      # - OVERWRITEPROTOCOL="https"
       - LETSENCRYPT_HOST=${LETSENCRYPT_HOST}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
       - REDIS_HOST=redis
       - REDIS_HOST_PORT=6379
       - REDIS_HOST_PASSWORD=${REDIS_HOST_PASSWORD}
-      - "NEXTCLOUD_DATA_DIR=/var/www/html${MEDIA_LIBARY}"
       - APACHE_BODY_LIMIT=0
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=${MYSQL_USER_PASSWORD}
+      - MYSQL_HOST=mysql
     restart: unless-stopped
     labels:
       - "location=${LOCATION}"
@@ -152,11 +242,19 @@ services:
   # */5  *  *  *  * docker exec -t -u www-data nextcloud php -f cron.php
 
   prometheus:
+    profiles:
+      - main
     image: ${PROMETHEUS_TAG}
     container_name: prometheus
     user: ${WWW_USER}
+    # user: root
+    configs:
+      - source: prom_config
+        target: /etc/prometheus/prometheus.yml
+      - source: prom_alerts
+        target: /etc/prometheus/alerts.yml
     volumes:
-      - ${CONF_DIR}/prometheus:/etc/prometheus
+      #      - ${CONF_DIR}/prometheus:/etc/prometheus
       - ${DATA_DIR}/prometheus:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -176,7 +274,10 @@ services:
     restart: unless-stopped
     labels:
       - "location=${LOCATION}"
+
   pushgateway:
+    profiles:
+      - main
     image: ${PUSHGATEWAY_TAG}
     container_name: pushgateway
     restart: unless-stopped
@@ -186,6 +287,8 @@ services:
       - "location=${LOCATION}"
 
   node-cert-exporter:
+    profiles:
+      - main
     image: ${NODE_CERT_EXPORTER_TAG}
     container_name: node-cert-exporter
     volumes:
@@ -200,6 +303,8 @@ services:
       - "location=${LOCATION}"
 
   node-exporter:
+    profiles:
+      - main
     image: ${NODE_EXPORTER_TAG}
     container_name: node-exporter
     volumes:
@@ -220,6 +325,8 @@ services:
       - "location=${LOCATION}"
 
   cadvisor:
+    profiles:
+      - main
     image: ${CADVISOR_TAG}
     container_name: cadvisor
     privileged: true
@@ -243,13 +350,24 @@ services:
       - "location=${LOCATION}"
 
   alertmanager:
+    profiles:
+      - main
     image: ${ALERTMANAGER_TAG}
     container_name: alertmanager
     ports:
       - 9093:9093
-    volumes:
-      - ${CONF_DIR}/alertmanager/:/etc/alertmanager/
+    configs:
+      - source: alertmanager_config
+        target: /etc/alertmanager/config.yml
+      - source: alertmanager_template
+        target: /etc/alertmanager/templates/${DOMAIN}.tmpl
+    #    volumes:
+    #      - ${CONF_DIR}/alertmanager/:/etc/alertmanager/
     restart: unless-stopped
+    links:
+      - tor:tor
+    environment:
+      - "HTTPS_PROXY=socks5h://tor:9150"
     command:
       - "--config.file=/etc/alertmanager/config.yml"
       - "--storage.path=/alertmanager"
@@ -277,21 +395,4 @@ networks:
   default:
     driver: bridge
     driver_opts:
-      com.docker.network.driver.mtu: 1400
-
-configs:
-  tor_config:
-    content: |
-      HardwareAccel 1
-      Log notice stdout
-      DNSPort 0.0.0.0:8853
-      SocksPort 0.0.0.0:9150
-      DataDirectory /var/lib/tor
-      UseBridges 1
-      # UpdateBridgesFromAuthority 1
-      # Install obfs4proxy (lyrebird) to container
-      # apk update & apk add obfs4proxy
-      ClientTransportPlugin obfs4 exec /usr/bin/lyrebird
-      # https://torscan-ru.ntc.party/
-      # sed 's/^obfs5 /Bridge obfs4 /g' -i /opt/tor/torrc
-      ${TOR_BRIDGES}
+      com.docker.network.driver.mtu: 1500
