@@ -63,3 +63,5 @@ Add storage:
 - Photo - Local - None - /var/www/html/data/media_libary/photo
 - Music - Local - None - /var/www/html/data/media_libary/music
 - Torrents - Local - None - /var/www/html/data/media_libary/transmission/complete
+
+Тестовая запись
