@@ -46,7 +46,7 @@ First, create the directories and set permissions. Then, run the temporary letse
 When the symbolic link is created, use CTRL+C to terminate the first process and initiate the deployment of main services.
 
 ```sh
-chmod +x deply.sh
+chmod +x deploy.sh
 bash ./deploy.sh
 ```
 
