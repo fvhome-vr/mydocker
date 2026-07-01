@@ -30,14 +30,9 @@ services:
     container_name: nginx_setup
     ports:
       - 80:80
-      # - 443:443
     configs:
       - source: nginx_setup_config
         target: /etc/nginx/conf.d/${DOMAIN}.conf
-        # mode: "0644"
-      # - source: nginx_setup_vhost 
-      #   target: /etc/nginx/vhost.d/default
-      #   mode: "0644"
     volumes:
       - ${CONF_DIR}/nginx/vhost.d:/etc/nginx/vhost.d:rw
       - ${CONF_DIR}/nginx/conf.d:/etc/nginx/conf.d:rw

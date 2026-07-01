@@ -129,13 +129,7 @@ configs:
       SocksPort 0.0.0.0:9150
       DataDirectory /var/lib/tor
       UseBridges 1
-      # UpdateBridgesFromAuthority 1
-      # Install obfs4proxy (lyrebird) to container
-      # apk update & apk add obfs4proxy
-      ClientTransportPlugin obfs4 exec /usr/bin/lyrebird
-      # https://torscan-ru.ntc.party/
-      # sed 's/^obfs5 /Bridge obfs4 /g' -i /opt/tor/torrc
-      ${TOR_BRIDGES}
+
   prom_alerts:
     content: |
       groups:
