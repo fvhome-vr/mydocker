@@ -6,7 +6,7 @@ if [ ! -h "${CONF_DIR}/nginx/certs/${DOMAIN}.crt" ]; then
     echo "Start setup.."
     DOCKER80=$(docker ps -f status=running -f publish=80 -q)
     [ -n "${DOCKER80}" ] && docker stop "${DOCKER80}" && docker rm -f nginx
-    mkdir -p ${DATA_DIR}/{prometheus,nextcloud}
+    mkdir -p ${DATA_DIR}/{prometheus,nextcloud,v2raya}
     mkdir -p ${MEDIA_LIBARY}/{music,photo,video}
     mkdir -p ${MEDIA_LIBARY}/transmission/{complete,incomplete}
     chown "${WWW_USER_UID}":"${WWW_USER_GID}" -R "${DATA_DIR}" "${MEDIA_LIBARY}"

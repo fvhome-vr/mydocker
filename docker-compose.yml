@@ -47,6 +47,28 @@ services:
     labels:
       - "location=${LOCATION}"
 
+  # Core VPN proxy handler
+  papervpn-core:
+    profiles:
+      - main 
+    image: ${PAPERVPN_TAG}
+    container_name: papervpn-core
+    restart: unless-stopped
+    environment:
+      - V2RAYA_LOG_FILE=/var/log/v2raya/v2raya.log
+      - V2RAYA_V2RAY_BIN=/usr/local/bin/xray
+    volumes:
+      - ${DATA_DIR}/v2raya:/etc/v2raya
+    ports:
+      - "2017:2017"
+      - "20170:20170"
+      - "20171:20171"
+      - "20172:20172"
+    cap_add:
+      - NET_ADMIN
+    labels:
+      - "location=${LOCATION}"
+      
   tor:
     profiles:
       - main
@@ -173,6 +195,32 @@ services:
     restart: unless-stopped
     labels:
       - "location=${LOCATION}"
+
+#  gitea:
+#    profile:
+#      - main
+#    image: ${GITEA_TAG}
+#    container_name: gitea
+#    restart: always
+#    environment:
+#      - USER_UID=1000
+#      - USER_GID=1000
+#      # Database Settings (Auto-connects)
+#      - GITEA__database__DB_TYPE=mysql
+#      - GITEA__database__HOST=mysql:3306
+#      - GITEA__database__NAME=gitea
+#      - GITEA__database__USER=${}
+#      - GITEA__database__PASSWD=${}
+#    volumes:
+#      - ./gitea:/data
+#      - /etc/timezone:/etc/timezone:ro
+#      - /etc/localtime:/etc/localtime:ro
+#    ports:
+#      - "3000:3000"
+#      - "2222:22"
+#    depends_on:
+#      - mysql
+#
 
   redis:
     profiles:
