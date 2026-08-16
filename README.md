@@ -7,6 +7,7 @@ It's compose file for deploy to standalone home server:
 - nginx and letsencrypt
 - transmission
 - tor
+- v2rayA
 - monitoring:
   - prometheus
   - alertmanager
