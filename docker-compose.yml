@@ -213,7 +213,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - GITEA_DB_PASSWORD=${GITEA_DB_PASSWORD}
-    entrypoint: []
+    entrypoint: ["mysql"]
     command:
       - "-h"
       - "mysql"
