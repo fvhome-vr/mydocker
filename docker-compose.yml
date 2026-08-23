@@ -213,15 +213,14 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - GITEA_DB_PASSWORD=${GITEA_DB_PASSWORD}
-    command: >
-      sh -c "
-      echo 'Проверка и создание базы данных Gitea...';
-      mysql -h mysql -u root -p'$$MYSQL_ROOT_PASSWORD' -e \"
-      CREATE DATABASE IF NOT EXISTS gitea CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
-      GRANT ALL PRIVILEGES ON gitea.* TO 'gitea'@'%' IDENTIFIED BY '$$GITEA_DB_PASSWORD';
-      FLUSH PRIVILEGES;
-      \"
-      "
+    command:
+      - "-h"
+      - "mysql"
+      - "-u"
+      - "root"
+      - "-p${MYSQL_ROOT_PASSWORD}"
+      - "-e"
+      - "CREATE DATABASE IF NOT EXISTS gitea CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'; GRANT ALL PRIVILEGES ON gitea.* TO 'gitea'@'%' IDENTIFIED BY '${GITEA_DB_PASSWORD}'; FLUSH PRIVILEGES;"
 
   gitea:
     profiles:
