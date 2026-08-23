@@ -8,6 +8,7 @@ It's compose file for deploy to standalone home server:
 - transmission
 - tor
 - v2rayA
+- gitea
 - monitoring:
   - prometheus
   - alertmanager
@@ -64,3 +65,13 @@ Add storage:
 - Photo - Local - None - /var/www/html/data/media_libary/photo
 - Music - Local - None - /var/www/html/data/media_libary/music
 - Torrents - Local - None - /var/www/html/data/media_libary/transmission/complete
+
+2. Gitea
+
+link: https://${DOMAIN}:3000
+
+Perform initial setup of gitea
+
+- to disable registration set in `${DATA_DIR}/gitea/gitea/conf/app.ini`
+
+DISABLE_REGISTRATION = true

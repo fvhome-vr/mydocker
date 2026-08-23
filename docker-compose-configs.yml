@@ -277,6 +277,15 @@ configs:
             summary: "Container <b>mysql</b> down"
             description: "Container <b>mysql</b> has been down for more than 1 minute."
 
+        - alert: ContainerDown_gitea
+          expr: absent(container_memory_usage_bytes{name="gitea"})
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Container <b>gitea</b> down"
+            description: "Container <b>gitea</b> has been down for more than 1 minute."
+
         - alert: ContainerDown_nextcloud
           expr: absent(container_memory_usage_bytes{name="nextcloud"})
           for: 1m
