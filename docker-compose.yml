@@ -195,32 +195,62 @@ services:
     restart: unless-stopped
     labels:
       - "location=${LOCATION}"
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-#  gitea:
-#    profile:
-#      - main
-#    image: ${GITEA_TAG}
-#    container_name: gitea
-#    restart: always
-#    environment:
-#      - USER_UID=1000
-#      - USER_GID=1000
-#      # Database Settings (Auto-connects)
-#      - GITEA__database__DB_TYPE=mysql
-#      - GITEA__database__HOST=mysql:3306
-#      - GITEA__database__NAME=gitea
-#      - GITEA__database__USER=${}
-#      - GITEA__database__PASSWD=${}
-#    volumes:
-#      - ./gitea:/data
-#      - /etc/timezone:/etc/timezone:ro
-#      - /etc/localtime:/etc/localtime:ro
-#    ports:
-#      - "3000:3000"
-#      - "2222:22"
-#    depends_on:
-#      - mysql
-#
+  gitea-db-init:
+    profiles: 
+      - main
+    depends_on:
+      mysql:
+        condition: service_healthy
+    image: ${MYSQL_TAG}
+    container_name: gitea-db-init
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - GITEA_DB_PASSWORD=${GITEA_DB_PASSWORD}
+    entrypoint: ["mysql"]
+    command:
+      - "-h"
+      - "mysql"
+      - "-u"
+      - "root"
+      - "-p${MYSQL_ROOT_PASSWORD}"
+      - "-e"
+      - "CREATE DATABASE IF NOT EXISTS gitea CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'; GRANT ALL PRIVILEGES ON gitea.* TO 'gitea'@'%' IDENTIFIED BY '${GITEA_DB_PASSWORD}'; FLUSH PRIVILEGES;"
+
+  gitea:
+    profiles:
+      - main
+    depends_on:
+      gitea-db-init:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_started 
+    image: ${GITEA_TAG}
+    container_name: gitea
+    restart: always
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=mysql
+      - GITEA__database__HOST=mysql:3306
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=${GITEA_DB_PASSWORD}
+    volumes:
+      - ${DATA_DIR}/gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "2222:22"
+
+  
 
   redis:
     profiles:
@@ -418,21 +448,6 @@ services:
       # - '--log.level=debug'
     labels:
       - "location=${LOCATION}"
-
-#  byedpi:
-#    image: ${BYDPI_TAG}
-#    container_name: byedpi
-#    volumes:
-#      - ${CONF_DIR}/byedpi/host.crack:/host.crack
-#    # command: --hosts /host.crack -s1 -q1 -Y -Ar -s5 -o1+s -At -f-1 -r1+s -As -s1 -o1 +s -s-1 -An -b+500 --debug 1
-#    command: --hosts /host.crack -s1 -q1 -Y -Ar -s5 -o25000+s -At -f-1 -r1+s -As -s1 -o1+s -s-1 -An -b+500 --debug 1
-#    ports:
-#      -  1080:1080
-#        #    dns:
-#        #      - "8.8.8.8"
-#    restart: unless-stopped
-#    labels:
-#      - "location=${LOCATION}"
 
 networks:
   default:
