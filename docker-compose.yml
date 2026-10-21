@@ -53,10 +53,12 @@ services:
       - main 
     image: ${PAPERVPN_TAG}
     container_name: papervpn-core
+    network_mode: host
     restart: unless-stopped
     environment:
       - V2RAYA_LOG_FILE=/var/log/v2raya/v2raya.log
-      - V2RAYA_V2RAY_BIN=/usr/local/bin/xray
+      #- V2RAYA_V2RAY_BIN=/usr/local/bin/xray
+      #- V2RAYA_V2RAY_BIN=/usr/local/bin/v2ray
     volumes:
       - ${DATA_DIR}/v2raya:/etc/v2raya
     ports:
@@ -306,6 +308,9 @@ services:
       - MYSQL_USER=nextcloud
       - MYSQL_PASSWORD=${MYSQL_USER_PASSWORD}
       - MYSQL_HOST=mysql
+      # Включаем встроенный supervisor для запуска notify_push внутри контейнера:
+      - WITH_SUPERVISOR=1
+      - TRUSTED_PROXIES=${DOCKER_NETWORK}
     restart: unless-stopped
     labels:
       - "location=${LOCATION}"
@@ -454,3 +459,7 @@ networks:
     driver: bridge
     driver_opts:
       com.docker.network.driver.mtu: 1500
+    ipam:
+      driver: default
+      config:
+        - subnet: "${DOCKER_NETWORKS}"
