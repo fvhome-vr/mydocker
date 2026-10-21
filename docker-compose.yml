@@ -462,4 +462,4 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: "${DOCKER_NETWORKS}"
+        - subnet: "${DOCKER_NETWORK}"
