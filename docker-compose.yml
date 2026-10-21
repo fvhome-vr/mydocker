@@ -252,8 +252,6 @@ services:
       - "3000:3000"
       - "2222:22"
 
-  
-
   redis:
     profiles:
       - main
@@ -311,6 +309,7 @@ services:
       # Включаем встроенный supervisor для запуска notify_push внутри контейнера:
       - WITH_SUPERVISOR=1
       - TRUSTED_PROXIES=${DOCKER_NETWORK}
+      - PHP_UPLOAD_LIMIT=${UPLOAD_LIMIT}
     restart: unless-stopped
     labels:
       - "location=${LOCATION}"

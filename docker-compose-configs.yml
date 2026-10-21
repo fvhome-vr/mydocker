@@ -110,7 +110,7 @@ configs:
              ssl_trusted_certificate /etc/nginx/certs/${DOMAIN}.chain.pem;
              add_header Strict-Transport-Security "max-age=31536000" always;
              include /etc/nginx/vhost.d/default;
-             client_max_body_size 10000M;
+             client_max_body_size ${UPLOAD_LIMIT};
              location / {
                      proxy_set_header Host $$host;
                      proxy_set_header X-Real-IP $$remote_addr;
