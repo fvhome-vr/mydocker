@@ -35,6 +35,14 @@ Add to /etc/docker/daemon.json for metrics
 git clone https://github.com/fvhome-vr/mydocker.git
 cd mydocker
 ```
+for build nginx 1.31.9
+```
+git clone https://github.com/nginx-proxy/nginx-proxy.git 
+```
+You have to change the version in the following line to 1.31.9
+```
+FROM docker.io/library/nginx:1.31.6-alpine
+```
 
 ### set your envirement.
 

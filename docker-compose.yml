@@ -161,7 +161,10 @@ services:
     profiles:
       - main
       - proxy
-    image: ${NGINX_TAG}
+    build:
+      context: ./nginx-proxy
+      dockerfile: Dockerfile.alpine
+    #image: ${NGINX_TAG}
     container_name: nginx
     ports:
       - 80:80
