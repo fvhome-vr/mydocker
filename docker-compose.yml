@@ -189,6 +189,18 @@ services:
       - main
     image: ${MYSQL_TAG}
     container_name: mysql
+    command: >
+      --transaction-isolation=READ-COMMITTED
+      --binlog-format=ROW
+      --innodb-buffer-pool-size=4G
+      --innodb-log-file-size=256M
+      --innodb-flush-log-at-trx-commit=1
+      --innodb-flush-method=O_DIRECT
+      --max-connections=200
+      --tmp-table-size=128M
+      --max-heap-table-size=128M
+      --thread-cache-size=32
+      --table-open-cache=4000
     volumes:
       - ${CONF_DIR}/mysql:/var/lib/mysql
       - /etc/localtime:/etc/localtime:ro
@@ -218,7 +230,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - GITEA_DB_PASSWORD=${GITEA_DB_PASSWORD}
-    entrypoint: ["mysql"]
+    entrypoint: ["mariadb"]
     command:
       - "-h"
       - "mysql"
@@ -286,11 +298,11 @@ services:
       - ${CONF_DIR}/nextcloud/themes:/var/www/html/themes
       - /etc/localtime:/etc/localtime:ro
     configs:
-      - source: nexcloud_init
+      - source: nextcloud_init
         target: /docker-entrypoint-hooks.d/pre-installation/init.sh
         # uid: ${WWW_USER_UID}
         # gid: ${WWW_USER_GID}
-        # mode: "0700"
+        mode: "0755"
 
     environment:
       - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}

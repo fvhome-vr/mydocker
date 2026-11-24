@@ -57,7 +57,7 @@ configs:
       {{ template "tg" .Alerts.Resolved }}
       {{ end }}
       {{ end }}
-  nexcloud_init:
+  nextcloud_init:
     content: |
       #!/usr/bin/env bash
       exec >/tmp/nextcloud_init.log 2>&1
@@ -101,19 +101,24 @@ configs:
              http2  on;
              server_tokens off;
              access_log /var/log/nginx/access.log vhost;
+             ssl_protocols TLSv1.2 TLSv1.3;
              ssl_session_timeout 5m;
              ssl_session_cache shared:SSL:50m;
              ssl_session_tickets off;
              ssl_certificate /etc/nginx/certs/${DOMAIN}.crt;
              ssl_certificate_key /etc/nginx/certs/${DOMAIN}.key;
              ssl_dhparam /etc/nginx/certs/${DOMAIN}.dhparam.pem;
-             ssl_stapling on;
-             ssl_stapling_verify on;
              ssl_trusted_certificate /etc/nginx/certs/${DOMAIN}.chain.pem;
              add_header Strict-Transport-Security "max-age=31536000" always;
              include /etc/nginx/vhost.d/default;
              client_max_body_size ${UPLOAD_LIMIT};
+             client_body_timeout ${UPLOAD_TIMEOUT};
+             proxy_read_timeout ${UPLOAD_TIMEOUT};
+             proxy_send_timeout ${UPLOAD_TIMEOUT};
              location / {
+                     proxy_http_version 1.1;
+                     proxy_set_header Upgrade $$http_upgrade;
+                     proxy_set_header Connection "upgrade";
                      proxy_set_header Host $$host;
                      proxy_set_header X-Real-IP $$remote_addr;
                      proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;

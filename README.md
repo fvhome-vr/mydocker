@@ -23,7 +23,7 @@ Add to /etc/docker/daemon.json for metrics
 
 ```
 {  
- "metrics-addr": "172.17.0.1:9323",  
+  "metrics-addr": "172.17.0.1:9323" 
 }
 ```
 
